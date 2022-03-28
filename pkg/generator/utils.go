@@ -6,8 +6,8 @@ import (
 	"sort"
 	"unicode"
 
-	"github.com/atombender/go-jsonschema/pkg/codegen"
-	"github.com/atombender/go-jsonschema/pkg/schemas"
+	"github.com/everactive/go-jsonschema/pkg/codegen"
+	"github.com/everactive/go-jsonschema/pkg/schemas"
 )
 
 func hashArrayOfValues(values []interface{}) string {

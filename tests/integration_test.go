@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/atombender/go-jsonschema/pkg/generator"
+	"github.com/everactive/go-jsonschema/pkg/generator"
 )
 
 var basicConfig = generator.Config{
@@ -132,6 +132,7 @@ func testExampleFile(t *testing.T, cfg generator.Config, fileName string) {
 					t.Fatal(err)
 				}
 			}
+
 			if diff, ok := diffStrings(t, string(goldenData), string(source)); !ok {
 				t.Fatal(fmt.Sprintf("Contents different (left is expected, right is actual):\n%s", *diff))
 			}

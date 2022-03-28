@@ -8,8 +8,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/atombender/go-jsonschema/pkg/codegen"
-	"github.com/atombender/go-jsonschema/pkg/schemas"
+	"github.com/everactive/go-jsonschema/pkg/codegen"
+	"github.com/everactive/go-jsonschema/pkg/schemas"
 	"github.com/pkg/errors"
 )
 
@@ -495,8 +495,11 @@ func (g *schemaGenerator) generateDeclaredType(
 			}
 
 			g.output.file.Package.AddImport("encoding/json", "")
+			g.output.file.Package.AddImport("gopkg.in/yaml.v3", "")
 			g.output.file.Package.AddDecl(&codegen.Method{
 				Impl: func(out *codegen.Emitter) {
+
+					// json
 					out.Comment("UnmarshalJSON implements json.Unmarshaler.")
 					out.Println("func (j *%s) UnmarshalJSON(b []byte) error {", decl.Name)
 					out.Indent(1)
@@ -512,6 +515,36 @@ func (g *schemaGenerator) generateDeclaredType(
 					out.Println("type Plain %s", decl.Name)
 					out.Println("var %s Plain", varNamePlainStruct)
 					out.Println("if err := json.Unmarshal(b, &%s); err != nil { return err }",
+						varNamePlainStruct)
+
+					for _, v := range validators {
+						if !v.desc().beforeJSONUnmarshal {
+							v.generate(out)
+						}
+					}
+
+					out.Println("*j = %s(%s)", decl.Name, varNamePlainStruct)
+					out.Println("return nil")
+					out.Indent(-1)
+					out.Println("}")
+
+					// yaml
+					out.Newline()
+					out.Comment("UnmarshalYAML implements yaml.Unmarshaler.")
+					out.Println("func (j *%s) UnmarshalYAML(node *yaml.Node) error {", decl.Name)
+					out.Indent(1)
+					out.Println("var %s map[string]interface{}", varNameRawMap)
+					out.Println("if err := node.Decode(&%s); err != nil { return err }",
+						varNameRawMap)
+					for _, v := range validators {
+						if v.desc().beforeJSONUnmarshal {
+							v.generate(out)
+						}
+					}
+
+					out.Println("type Plain %s", decl.Name)
+					out.Println("var %s Plain", varNamePlainStruct)
+					out.Println("if err := node.Decode(&%s); err != nil { return err }",
 						varNamePlainStruct)
 
 					for _, v := range validators {
@@ -798,12 +831,24 @@ func (g *schemaGenerator) generateEnumType(
 
 	if wrapInStruct {
 		g.output.file.Package.AddImport("encoding/json", "")
+		g.output.file.Package.AddImport("gopkg.in/yaml.v3", "")
 		g.output.file.Package.AddDecl(&codegen.Method{
 			Impl: func(out *codegen.Emitter) {
+
+				//json
 				out.Comment("MarshalJSON implements json.Marshaler.")
 				out.Println("func (j *%s) MarshalJSON() ([]byte, error) {", enumDecl.Name)
 				out.Indent(1)
 				out.Println("return json.Marshal(j.Value)")
+				out.Indent(-1)
+				out.Println("}")
+
+				out.Newline()
+				// yaml
+				out.Comment("MarshalYAML implements yaml.Marshaler.")
+				out.Println("func (j *%s) MarshalYAML() (interface{}, error) {", enumDecl.Name)
+				out.Indent(1)
+				out.Println("return yaml.Marshal(j.Value)")
 				out.Indent(-1)
 				out.Println("}")
 			},
@@ -813,8 +858,11 @@ func (g *schemaGenerator) generateEnumType(
 	g.output.file.Package.AddImport("fmt", "")
 	g.output.file.Package.AddImport("reflect", "")
 	g.output.file.Package.AddImport("encoding/json", "")
+	g.output.file.Package.AddImport("gopkg.in/yaml.v3", "")
 	g.output.file.Package.AddDecl(&codegen.Method{
 		Impl: func(out *codegen.Emitter) {
+
+			// json
 			out.Comment("UnmarshalJSON implements json.Unmarshaler.")
 			out.Println("func (j *%s) UnmarshalJSON(b []byte) error {", enumDecl.Name)
 			out.Indent(1)
@@ -826,6 +874,32 @@ func (g *schemaGenerator) generateEnumType(
 				varName += ".Value"
 			}
 			out.Println("if err := json.Unmarshal(b, &%s); err != nil { return err }", varName)
+			out.Println("var ok bool")
+			out.Println("for _, expected := range %s {", valueConstant.Name)
+			out.Println("if reflect.DeepEqual(%s, expected) { ok = true; break }", varName)
+			out.Println("}")
+			out.Println("if !ok {")
+			out.Println(`return fmt.Errorf("invalid value (expected one of %%#v): %%#v", %s, %s)`,
+				valueConstant.Name, varName)
+			out.Println("}")
+			out.Println(`*j = %s(v)`, enumDecl.Name)
+			out.Println(`return nil`)
+			out.Indent(-1)
+			out.Println("}")
+
+			// yaml
+			out.Newline()
+			out.Comment("UnmarshalYAML implements yaml.Unmarshaler.")
+			out.Println("func (j *%s) UnmarshalYAML(node *yaml.Node) error {", enumDecl.Name)
+			out.Indent(1)
+			out.Print("var v ")
+			enumType.Generate(out)
+			out.Newline()
+			varName = "v"
+			if wrapInStruct {
+				varName += ".Value"
+			}
+			out.Println("if err := node.Decode(&%s); err != nil { return err }", varName)
 			out.Println("var ok bool")
 			out.Println("for _, expected := range %s {", valueConstant.Name)
 			out.Println("if reflect.DeepEqual(%s, expected) { ok = true; break }", varName)

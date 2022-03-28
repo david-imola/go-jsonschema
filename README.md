@@ -4,13 +4,13 @@ This tool generates Go data types and structs that corresponds to definitions in
 
 ## Installing
 
-* **Binary install**: Get a release [here](https://github.com/atombender/go-jsonschema/releases).
+* **Binary install**: Get a release [here](https://github.com/everactive/go-jsonschema/releases).
 
 * **From source**: Go 1.11 or later, with Go modules enabled, is advisable in order to get the right dependencies. To install:
 
 ```shell
-$ go get github.com/atombender/go-jsonschema/...
-$ go install github.com/atombender/go-jsonschema/cmd/gojsonschema
+$ go get github.com/everactive/go-jsonschema/...
+$ go install github.com/everactive/go-jsonschema/cmd/gojsonschema
 ```
 
 ## Usage
