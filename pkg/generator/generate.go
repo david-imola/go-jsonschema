@@ -5,11 +5,13 @@ import (
 	"go/format"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"unicode"
 
 	"github.com/everactive/go-jsonschema/pkg/codegen"
 	"github.com/everactive/go-jsonschema/pkg/schemas"
+	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 )
 
@@ -709,6 +711,58 @@ func (g *schemaGenerator) generateStructType(
 
 		structType.AddField(structField)
 	}
+
+	if additionalProp := t.AdditionalProperties; additionalProp != nil {
+
+		fieldName := "AdditionalProperties"
+		if additionalProp.Title != "" {
+			reg, err := regexp.Compile("[^a-zA-Z0-9]+")
+			if err == nil {
+				fieldName = reg.ReplaceAllString(additionalProp.Title, "")
+				fieldName = strcase.ToCamel(fieldName)
+			}
+		}
+		if ext := additionalProp.GoJSONSchemaExtension; ext != nil {
+			for _, pkg := range ext.Imports {
+				g.output.file.Package.AddImport(pkg, "")
+			}
+			if ext.Identifier != nil {
+				fieldName = *ext.Identifier
+			}
+		}
+
+		newType := &schemas.Type{
+			Items:                additionalProp,
+			AdditionalProperties: additionalProp,
+			Properties:           nil,
+		}
+
+		structField := codegen.StructField{
+			Name:       fieldName,
+			Comment:    additionalProp.Description,
+			JSONName:   "-",
+			SchemaType: newType,
+			Tags:       `json:"-,omitempty" yaml:"-,omitempty"`,
+		}
+
+		if structField.Comment == "" {
+			structField.Comment = fmt.Sprintf("%s corresponds to the JSON schema field \"AdditionalProperties\".",
+				structField.Name)
+		}
+
+		var err error
+		structField.Type, err = g.generateStructType(newType, scope.add(structField.Name))
+		if err != nil {
+			return nil, fmt.Errorf("could not generate type for field %q: %s", structField.Name, err)
+		}
+
+		if err != nil {
+			return nil, fmt.Errorf("could not generate type for field %q: %s", structField.Name, err)
+		}
+
+		structType.AddField(structField)
+	}
+
 	return &structType, nil
 }
 
