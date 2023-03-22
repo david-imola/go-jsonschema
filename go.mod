@@ -1,4 +1,4 @@
-module github.com/atombender/go-jsonschema
+module github.com/everactive/go-jsonschema
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
