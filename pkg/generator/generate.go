@@ -419,7 +419,7 @@ func (g *schemaGenerator) generateDeclaredType(
 	}
 
 	decl := codegen.TypeDecl{
-		Name:    g.output.uniqueTypeName(scope.string()),
+		Name:    g.output.uniqueTypeName(scope),
 		Comment: t.Description,
 	}
 	g.output.declsBySchema[t] = &decl
@@ -783,7 +783,7 @@ func (g *schemaGenerator) generateEnumType(
 	}
 
 	enumDecl := codegen.TypeDecl{
-		Name: g.output.uniqueTypeName(scope.string()),
+		Name: g.output.uniqueTypeName(scope),
 		Type: enumType,
 	}
 	g.output.file.Package.AddDecl(&enumDecl)
@@ -866,7 +866,8 @@ type output struct {
 	warner        func(string)
 }
 
-func (o *output) uniqueTypeName(name string) string {
+func (o *output) uniqueTypeName(s nameScope) string {
+	name := s.string()
 	if _, ok := o.declsByName[name]; !ok {
 		return name
 	}
