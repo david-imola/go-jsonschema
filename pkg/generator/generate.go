@@ -214,9 +214,9 @@ func (g *Generator) beginOutput(
 			FileName: outputName,
 			Package:  pkg,
 		},
-		declsBySchema:     map[*schemas.Type]*codegen.TypeDecl{},
-		declsByName:       map[string]*codegen.TypeDecl{},
-		declsByScopedName: map[string]*codegen.TypeDecl{},
+		declsBySchema:    map[*schemas.Type]*codegen.TypeDecl{},
+		declsByName:      map[string]*codegen.TypeDecl{},
+		scopedNameExists: map[string]bool{},
 	}
 	g.outputs[id] = output
 	return output, nil
@@ -425,7 +425,7 @@ func (g *schemaGenerator) generateDeclaredType(
 	}
 	g.output.declsBySchema[t] = &decl
 	g.output.declsByName[decl.Name] = &decl
-	g.output.declsByScopedName[scope.scoped()] = &decl
+	g.output.scopedNameExists[scope.scoped()] = true
 
 	theType, err := g.generateType(t, scope)
 	if err != nil {
@@ -435,7 +435,7 @@ func (g *schemaGenerator) generateDeclaredType(
 		// Don't declare named types under a new name
 		delete(g.output.declsBySchema, t)
 		delete(g.output.declsByName, decl.Name)
-		delete(g.output.declsByScopedName, scope.scoped())
+		g.output.scopedNameExists[scope.scoped()] = false
 		return theType, nil
 	}
 	decl.Type = theType
@@ -793,7 +793,7 @@ func (g *schemaGenerator) generateEnumType(
 
 	g.output.declsByName[enumDecl.Name] = &enumDecl
 	g.output.declsBySchema[t] = &enumDecl
-	g.output.declsByScopedName[scope.scoped()] = &enumDecl
+	g.output.scopedNameExists[scope.scoped()] = true
 
 	valueConstant := &codegen.Var{
 		Name:  "enumValues_" + enumDecl.Name,
@@ -864,15 +864,15 @@ func (g *schemaGenerator) generateEnumType(
 }
 
 type output struct {
-	file              *codegen.File
-	declsByName       map[string]*codegen.TypeDecl
-	declsBySchema     map[*schemas.Type]*codegen.TypeDecl
-	warner            func(string)
-	declsByScopedName map[string]*codegen.TypeDecl
+	file             *codegen.File
+	declsByName      map[string]*codegen.TypeDecl
+	declsBySchema    map[*schemas.Type]*codegen.TypeDecl
+	warner           func(string)
+	scopedNameExists map[string]bool
 }
 
 func (o *output) uniqueTypeName(s nameScope) string {
-	if _, ok := o.declsByScopedName[s.scoped()]; !ok {
+	if exists, ok := o.scopedNameExists[s.scoped()]; !ok || exists == false {
 		return s.string()
 	}
 
