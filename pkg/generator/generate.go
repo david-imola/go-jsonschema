@@ -872,15 +872,13 @@ type output struct {
 }
 
 func (o *output) uniqueTypeName(s nameScope) string {
-	//name := s.string()
-	//if _, ok := o.declsByName[name]; !ok {
-	//	return name
-	//}
-	name := s.string()
 	if _, ok := o.declsByScopedName[s.scoped()]; !ok {
-		return name
+		return s.string()
 	}
 
+	// If the scoped name matches then we have a unique name issue in that scope in which case
+	// we need to use numbered suffixes
+	name := s.string()
 	count := 1
 	for {
 		suffixed := fmt.Sprintf("%s_%d", name, count)

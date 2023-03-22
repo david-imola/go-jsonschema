@@ -1,0 +1,18 @@
+{
+  "title": "IoT DeviceTwin to Agent schema definitions",
+  "description": "The schema definitions for the messages passed between the agent and the device twin service",
+  "definitions": {
+    "deviceVersion": {
+      "type": "object",
+      "properties": {
+        "deviceId":        { "type":  "string" }
+      }
+    },
+    "device": {
+      "type": "object",
+      "properties": {
+        "version":            { "$ref":  "#/definitions/deviceVersion" }
+      }
+    }
+  }
+}
