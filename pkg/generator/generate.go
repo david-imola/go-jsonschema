@@ -214,8 +214,9 @@ func (g *Generator) beginOutput(
 			FileName: outputName,
 			Package:  pkg,
 		},
-		declsBySchema: map[*schemas.Type]*codegen.TypeDecl{},
-		declsByName:   map[string]*codegen.TypeDecl{},
+		declsBySchema:     map[*schemas.Type]*codegen.TypeDecl{},
+		declsByName:       map[string]*codegen.TypeDecl{},
+		declsByScopedName: map[string]*codegen.TypeDecl{},
 	}
 	g.outputs[id] = output
 	return output, nil
@@ -424,6 +425,7 @@ func (g *schemaGenerator) generateDeclaredType(
 	}
 	g.output.declsBySchema[t] = &decl
 	g.output.declsByName[decl.Name] = &decl
+	g.output.declsByScopedName[scope.scoped()] = &decl
 
 	theType, err := g.generateType(t, scope)
 	if err != nil {
@@ -433,6 +435,7 @@ func (g *schemaGenerator) generateDeclaredType(
 		// Don't declare named types under a new name
 		delete(g.output.declsBySchema, t)
 		delete(g.output.declsByName, decl.Name)
+		delete(g.output.declsByScopedName, scope.scoped())
 		return theType, nil
 	}
 	decl.Type = theType
@@ -790,6 +793,7 @@ func (g *schemaGenerator) generateEnumType(
 
 	g.output.declsByName[enumDecl.Name] = &enumDecl
 	g.output.declsBySchema[t] = &enumDecl
+	g.output.declsByScopedName[scope.scoped()] = &enumDecl
 
 	valueConstant := &codegen.Var{
 		Name:  "enumValues_" + enumDecl.Name,
@@ -860,10 +864,11 @@ func (g *schemaGenerator) generateEnumType(
 }
 
 type output struct {
-	file          *codegen.File
-	declsByName   map[string]*codegen.TypeDecl
-	declsBySchema map[*schemas.Type]*codegen.TypeDecl
-	warner        func(string)
+	file              *codegen.File
+	declsByName       map[string]*codegen.TypeDecl
+	declsBySchema     map[*schemas.Type]*codegen.TypeDecl
+	warner            func(string)
+	declsByScopedName map[string]*codegen.TypeDecl
 }
 
 func (o *output) uniqueTypeName(s nameScope) string {
@@ -901,6 +906,10 @@ func newNameScope(s string) nameScope {
 
 func (ns nameScope) string() string {
 	return strings.Join(ns, "")
+}
+
+func (ns nameScope) scoped() string {
+	return strings.Join(ns, "_")
 }
 
 func (ns nameScope) add(s string) nameScope {
