@@ -872,10 +872,15 @@ type output struct {
 }
 
 func (o *output) uniqueTypeName(s nameScope) string {
+	//name := s.string()
+	//if _, ok := o.declsByName[name]; !ok {
+	//	return name
+	//}
 	name := s.string()
-	if _, ok := o.declsByName[name]; !ok {
+	if _, ok := o.declsByScopedName[s.scoped()]; !ok {
 		return name
 	}
+
 	count := 1
 	for {
 		suffixed := fmt.Sprintf("%s_%d", name, count)
